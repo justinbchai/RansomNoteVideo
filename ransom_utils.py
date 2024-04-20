@@ -2,13 +2,19 @@ import requests
 from selenium import webdriver
 from selenium.webdriver.common.by import By
 import urllib
+import whisper
+import whisper_timestamped
 import pprint
-from transcriber import Transcriber
+from moviepy.editor import *
 
-def download_video():
+
+
+def download_video(target_phrase):
     driver = webdriver.Firefox()
+    
+    url = 'https://www.playphrase.me/#/search?q=' + target_phrase.replace(' ', '+') + '&pos=0'
 
-    driver.get("https://www.playphrase.me/#/search?q=you+cut+your+hair&pos=1")
+    driver.get(url)
 
     # Find the element that contains the .mp4 file link (you may need to adjust the selector)
     mp4_element = driver.find_element(By.ID, "video-player-0")
@@ -39,13 +45,32 @@ def download_video():
         print(f"{mp4_url} downloaded!")
     driver.close()
 
-def generate_srt_file(filename):
-    model_path = "vosk-model-small-en-us-0.15"
+def get_timestamps(filename, target_string):
+    delta = 0.1
+    audio = whisper.load_audio(filename)
+    model = whisper_timestamped.load_model("medium", device="cpu")
+    result = whisper_timestamped.transcribe(model, audio, language="en")
 
-    transcriber = Transcriber(model_path)
-    transcription = transcriber.transcribe(filename)
+    timestamps = list()
+    l = 0
+    while l < len(result):
+        temp = result["segments"][0]["words"][l]
+        if temp["text"].lower() in target_string:
+            break
+        l+=1
+    timestamps.append(result["segments"][0]["words"][l]["start"])
+    l += len(target_string.split()) - 1
+    timestamps.append(result["segments"][0]["words"][l]["start"])
 
-    pprint.pprint(transcription)
+    return max(0, timestamps[0] - delta), timestamps[1] + delta
+
+def cut_clip(filename, target_string):
+    l, r = get_timestamps(filename, target_string)
+    clip = VideoFileClip(filename).subclip(l, r)
+    clip.write_videofile(f"cut-{filename}")
+    return clip
+
 
 if __name__ == "__main__":
-    generate_srt_file("videoname.mp4")
+    download_video("you cut your hair")
+    cut_clip("videoname.mp4", "you cut your hair")
