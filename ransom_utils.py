@@ -10,40 +10,49 @@ from moviepy.editor import *
 
 
 def download_video(target_phrase):
+
     driver = webdriver.Firefox()
     
     url = 'https://www.playphrase.me/#/search?q=' + target_phrase.replace(' ', '+') + '&pos=0'
 
     driver.get(url)
 
-    # Find the element that contains the .mp4 file link (you may need to adjust the selector)
-    mp4_element = driver.find_element(By.ID, "video-player-0")
+    filename = f'{target_phrase.replace(' ', '-')}.mp4'
 
-    if mp4_element:
-        # Get the .mp4 file URL
-        mp4_url = mp4_element.get_attribute('src')
+    try:
 
-        # obtain filename by splitting url and getting
-        # last string  
-        mp4_url = mp4_url.split('?')[0]
-        
-        # Download the .mp4 file (you can use requests or any other method)
-        # Example: You can use requests.get(mp4_url) to download the file
-        # Remember to handle errors and save the file appropriately
-        print(f"Downloading file: {mp4_url}")
+        # Find the element that contains the .mp4 file link (you may need to adjust the selector)
+        mp4_element = driver.find_element(By.ID, "video-player-0")
 
-        # create response object  
-        r = requests.get(mp4_url, stream = True)  
+        if mp4_element:
+            # Get the .mp4 file URL
+            mp4_url = mp4_element.get_attribute('src')
+
+            # obtain filename by splitting url and getting
+            # last string  
+            mp4_url = mp4_url.split('?')[0]
             
-        # download started  
-        urllib.request.urlretrieve(mp4_url, 'videoname.mp4')
-        # with open(mp4_url, 'wb') as f:  
-        #     for chunk in r.iter_content(chunk_size = 1024*1024):  
-        #         if chunk:  
-        #             f.write(chunk)  
-            
-        print(f"{mp4_url} downloaded!")
-    driver.close()
+            # Download the .mp4 file (you can use requests or any other method)
+            # Example: You can use requests.get(mp4_url) to download the file
+            # Remember to handle errors and save the file appropriately
+            print(f"Downloading file: {mp4_url}")
+
+            # create response object  
+            r = requests.get(mp4_url, stream = True)  
+                
+            # download started  
+            urllib.request.urlretrieve(mp4_url, filename)
+            # with open(mp4_url, 'wb') as f:  
+            #     for chunk in r.iter_content(chunk_size = 1024*1024):  
+            #         if chunk:  
+            #             f.write(chunk)  
+                
+            print(f"{mp4_url} downloaded!")
+        driver.quit()
+        cut_clip(filename, target_phrase)
+    except:
+        driver.close()
+        download_video(target_phrase.rsplit(' ', 1)[0])
 
 def get_timestamps(filename, target_string):
     delta = 0.1
@@ -68,9 +77,13 @@ def cut_clip(filename, target_string):
     l, r = get_timestamps(filename, target_string)
     clip = VideoFileClip(filename).subclip(l, r)
     clip.write_videofile(f"cut-{filename}")
-    return clip
+    return clip, filename
+
+def main():
+    phrase = "round your city round"
+    download_video(phrase)
+    
 
 
 if __name__ == "__main__":
-    download_video("you cut your hair")
-    cut_clip("videoname.mp4", "you cut your hair")
+    main()
