@@ -4,12 +4,15 @@ from selenium.webdriver.common.by import By
 import urllib
 import whisper
 import whisper_timestamped
-import pprint
 from moviepy.editor import *
+import time
+import string
 
 
 
 def download_video(target_phrase):
+    if (target_phrase == ''):
+        raise Exception("Could not find any movie clips")
 
     driver = webdriver.Firefox()
     
@@ -20,9 +23,10 @@ def download_video(target_phrase):
     filename = f'{target_phrase.replace(' ', '-')}.mp4'
 
     try:
+        time.sleep(2)
 
         # Find the element that contains the .mp4 file link (you may need to adjust the selector)
-        mp4_element = driver.find_element(By.ID, "video-player-0")
+        mp4_element = driver.find_element(By.TAG_NAME, 'video')
 
         if mp4_element:
             # Get the .mp4 file URL
@@ -41,43 +45,54 @@ def download_video(target_phrase):
             r = requests.get(mp4_url, stream = True)  
                 
             # download started  
-            urllib.request.urlretrieve(mp4_url, filename)
-            # with open(mp4_url, 'wb') as f:  
-            #     for chunk in r.iter_content(chunk_size = 1024*1024):  
-            #         if chunk:  
-            #             f.write(chunk)  
+            urllib.request.urlretrieve(mp4_url, filename) 
                 
             print(f"{mp4_url} downloaded!")
         driver.quit()
-        cut_clip(filename, target_phrase)
+        return cut_clip(filename, target_phrase)
     except:
         driver.close()
-        download_video(target_phrase.rsplit(' ', 1)[0])
+        return download_video(target_phrase.rsplit(' ', 1)[0])
 
 def get_timestamps(filename, target_string):
     delta = 0.1
     audio = whisper.load_audio(filename)
-    model = whisper_timestamped.load_model("medium", device="cpu")
-    result = whisper_timestamped.transcribe(model, audio, language="en")
-
+    model = whisper_timestamped.load_model("large", device="cpu")
+    result = whisper_timestamped.transcribe(model, audio, language="en", initial_prompt=f"the phrase {target_string} should be transcribed")
+    target_list = target_string.split()
+    
+    import json
+    print(json.dumps(result, indent = 2, ensure_ascii = False))
+    print(target_list)
     timestamps = list()
     l = 0
-    while l < len(result):
-        temp = result["segments"][0]["words"][l]
-        if temp["text"].lower() in target_string:
-            break
-        l+=1
-    timestamps.append(result["segments"][0]["words"][l]["start"])
-    l += len(target_string.split()) - 1
-    timestamps.append(result["segments"][0]["words"][l]["start"])
+    r = len(target_list)-1
+    for i in range(len(result["segments"])):
+        while r < len(result["segments"][i]["words"]):
+            left_word = result["segments"][i]["words"][l]["text"].lower().translate(str.maketrans('', '', string.punctuation))
+            right_word = result["segments"][i]["words"][r]["text"].lower().translate(str.maketrans('', '', string.punctuation))
+            print(left_word, right_word)
+            if left_word == target_list[0].lower().translate(str.maketrans('', '', string.punctuation)) and right_word == target_list[-1].lower().translate(str.maketrans('', '', string.punctuation)):
+                print(result["segments"][i]["words"][l], result["segments"][i]["words"][r], target_string)
+                timestamps.append(result["segments"][i]["words"][l]["start"])
+                timestamps.append(result["segments"][i]["words"][r]["end"])
+                clip = VideoFileClip(filename)
+                duration = clip.duration
+                return max(0, timestamps[0] - delta), min(timestamps[1] + delta, duration)
+            l+=1
+            r+=1
+        l = 0
+        r = len(target_list)-1
+    print("something went wront")
 
-    return max(0, timestamps[0] - delta), timestamps[1] + delta
+    
 
 def cut_clip(filename, target_string):
     l, r = get_timestamps(filename, target_string)
+    print(l, r)
     clip = VideoFileClip(filename).subclip(l, r)
-    clip.write_videofile(f"cut-{filename}")
-    return clip, filename
+    clip.write_videofile(f"output/cut-{filename}")
+    return clip, target_string
 
 def main():
     phrase = "round your city round"
