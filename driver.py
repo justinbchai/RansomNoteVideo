@@ -6,14 +6,14 @@ def main():
     passage = input("Enter the message you'd like to ransom-noteify: ").split()
     final_name = input("Enter the file name: ")
     while len(passage) > 0:
-        print(passage)
-        clip, phrase = ru.download_video(" ".join(passage[:4]))
-        print("Phrase", phrase)
-        clip_array.append(clip)
+        try:
+            clip, phrase = ru.download_video(" ".join(passage[:4]))
+            print(phrase)
+            clip_array.append(clip)
+        except:
+            pass
         padding = ColorClip(size=clip_array[0].size, color=(0, 0, 0), duration=0.3)
         clip_array.append(padding)
-
-
         passage = passage[len(phrase.split()):]
 
     final_clip = concatenate_videoclips(clip_array, "compose")
