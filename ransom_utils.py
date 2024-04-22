@@ -11,6 +11,7 @@ import time
 import string
 from selenium.webdriver.firefox.options import Options
 
+# TODO remove print statements
 
 def download_video(target_phrase:string) -> list[int]:
     if (target_phrase == ''):
@@ -55,8 +56,11 @@ def download_video(target_phrase:string) -> list[int]:
                     driver.quit()
                     return clip, target_string
                 except:
+                    # when cut_clip() raises exception, move on to next clip. May result
+                    # in idle windows of Firefox being left open
                     pass
     except:
+        # no clips exist for given phrase. Try again with same phrase minus the last word
         driver.close()
         return download_video(target_phrase.rsplit(' ', 1)[0])
         
