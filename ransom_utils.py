@@ -25,12 +25,12 @@ def download_video(target_phrase:string) -> list[int]:
     try: 
         # Wait until at least one video tag is present
         WebDriverWait(driver, 10).until(EC.presence_of_all_elements_located((By.TAG_NAME, 'video')))
+        # Find the elements that contain the .mp4 file links (you may need to adjust the selector)
         mp4_elements = driver.find_elements(By.TAG_NAME, 'video')
         time.sleep(2)
         print(mp4_elements)
 
         if mp4_elements:
-            # Find the element that contains the .mp4 file link (you may need to adjust the selector)
             for mp4_element in mp4_elements:
                 # Get the .mp4 file URL
                 mp4_url = mp4_element.get_attribute('src')
@@ -40,8 +40,6 @@ def download_video(target_phrase:string) -> list[int]:
                 mp4_url = mp4_url.split('?')[0]
                 
                 # Download the .mp4 file (you can use requests or any other method)
-                # Example: You can use requests.get(mp4_url) to download the file
-                # Remember to handle errors and save the file appropriately
                 print(f"Downloading file: {mp4_url}")
 
                 # create response object  
