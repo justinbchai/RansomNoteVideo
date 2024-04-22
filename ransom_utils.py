@@ -9,14 +9,16 @@ import whisper_timestamped
 from moviepy.editor import *
 import time
 import string
-
+from selenium.webdriver.firefox.options import Options
 
 
 def download_video(target_phrase:string) -> list[int]:
     if (target_phrase == ''):
         raise Exception("Could not find any movie clips")
     filename = f'{target_phrase.replace(' ', '-')}.mp4'
-    driver = webdriver.Firefox()
+    options = Options()
+    options.add_argument("--headless")
+    driver = webdriver.Firefox(options=options)
     url = 'https://www.playphrase.me/#/search?q=' + target_phrase.replace(' ', '+') + '&pos=0'
 
     driver.get(url)
@@ -85,7 +87,7 @@ def get_timestamps(filename:string, target_string:string):
                 timestamps.append(result["segments"][i]["words"][r]["end"])
                 clip = VideoFileClip(filename)
                 duration = clip.duration
-                return max(0, timestamps[0]-delta), min(timestamps[1]+delta+0.1, duration)
+                return max(0, timestamps[0]-delta), min(timestamps[1]+delta, duration)
             l+=1
             r+=1
         l = 0
